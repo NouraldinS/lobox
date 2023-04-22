@@ -1,5 +1,5 @@
 import React, {
-  ChangeEventHandler, KeyboardEventHandler, useEffect, useMemo, useState,
+  KeyboardEventHandler, useEffect, useState,
 } from 'react';
 import { v4 as uuid } from 'uuid';
 import useClickOutside from './useClickOutside';
@@ -20,11 +20,10 @@ interface DropdownProps<T> {
   items?: T[];
   getLabel: (item: T) => React.ReactNode;
   getValue: (item: T) => string;
-  filter?: (item: MenuItem<T>) => boolean;
   placeholder?: string;
 }
 
-const EMPTY_FILTER = '';
+const EMPTY_STRING = '';
 
 const useDropdown = <T>(
   props: DropdownProps<T>,
@@ -36,7 +35,6 @@ const useDropdown = <T>(
     getLabel,
     getValue,
     placeholder,
-    filter: filterFunction,
   } = props;
 
   const [
@@ -46,13 +44,17 @@ const useDropdown = <T>(
       has: hasSelectedItem,
     }] = useSet();
 
-  const [filter, setFilter] = useState<string>(EMPTY_FILTER);
+  const [fieldValue, setFieldValue] = useState<string>(EMPTY_STRING);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menu, setMenu] = useState<MenuItem<T>[]>([]);
   const [focusedItem, setFocusedItem] = useState<string | null>(null);
 
-  const defaultFilterFucntion = (item: MenuItem<T>) => item.value
-    .toLowerCase().includes(filter?.toLowerCase() || EMPTY_FILTER);
+  useEffect(() => {
+    const selectedItemsArray = Array.from(selectedItems);
+    setFieldValue(menu
+      .filter(({ id }) => selectedItemsArray.includes(id))
+      .map(({ label }) => label).join(', '));
+  }, [selectedItems, menu]);
 
   useEffect(() => {
     if (!items || !Array.isArray(items)) {
@@ -68,14 +70,8 @@ const useDropdown = <T>(
     })));
   }, [items]);
 
-  const filteredItems = useMemo(
-    () => menu.filter(filterFunction || defaultFilterFucntion),
-    [menu, filter],
-  );
-
   useClickOutside(ref, () => {
     setIsMenuOpen(false);
-    setFilter(EMPTY_FILTER);
   });
 
   const focusNextItem = (itemId: string) => {
@@ -117,14 +113,11 @@ const useDropdown = <T>(
           toggleItemSelection(focusedItem as string);
         }
       }) as KeyboardEventHandler<HTMLInputElement>,
-      onChange: (({ target: { value } }) => {
-        if (value) { setFilter(value); } else { setFilter(EMPTY_FILTER); }
-      }) as ChangeEventHandler<HTMLInputElement>,
-      value: filter,
+      value: fieldValue,
       placeholder,
     },
     menuProps: {
-      items: filteredItems,
+      items: menu,
       isOpen: isMenuOpen,
       onSelect: (menuItem) => {
         toggleItemSelection(menuItem.id);

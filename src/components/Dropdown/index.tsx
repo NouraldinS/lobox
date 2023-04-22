@@ -37,7 +37,7 @@ const Dropdown = () => {
     items,
     getLabel: (item) => item.label,
     getValue: (item) => item.value,
-    placeholder: 'Search',
+    placeholder: 'Select items',
   }, ref);
 
   return (
